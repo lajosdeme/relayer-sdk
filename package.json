@@ -1,0 +1,18 @@
+{
+  "name": "relayer-sdk",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "type": "module",
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@lukso/eip191-signer.js": "^0.2.2",
+    "@lukso/lsp-smart-contracts": "^0.14.0",
+    "ethers": "5.7.2"
+  }
+}
