@@ -13,6 +13,7 @@
   "dependencies": {
     "@lukso/eip191-signer.js": "^0.2.2",
     "@lukso/lsp-smart-contracts": "^0.14.0",
+    "axios": "^1.6.7",
     "ethers": "5.7.2"
   }
 }

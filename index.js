@@ -1,11 +1,13 @@
-import UniversalProfileContract from '@lukso/lsp-smart-contracts/artifacts/UniversalProfile.json' assert {type: "json"};
-import KeyManagerContract from '@lukso/lsp-smart-contracts/artifacts/LSP6KeyManager.json' assert {type: "json"};
+import UniversalProfileContract from '@lukso/lsp-smart-contracts/artifacts/UniversalProfile.json' assert { type: "json" };
+import KeyManagerContract from '@lukso/lsp-smart-contracts/artifacts/LSP6KeyManager.json' assert { type: "json" };
 import {
     EIP191Signer
 } from '@lukso/eip191-signer.js';
 import {
     ethers
 } from 'ethers';
+
+import axios from 'axios';
 
 class RelayerSDK {
     constructor(userId, contractAddress, contractAbi, privateKey, provider) {
@@ -17,23 +19,33 @@ class RelayerSDK {
 
         this.chainId = "0x0000000000000000000000000000000000000000000000000000000000001069"
         this.validityTimestamps = "0x0000000000000000000000000000000000000000000000000000000067748580";
+        this.baseUrl = "http://localhost:3000"
+        this.executeEndpoint = "/execute"
     }
 
-    execute = async function(universalProfileAddress, value, functionName, functionArguments) {
+    execute = async function (universalProfileAddress, value, functionName, functionArguments) {
         const data = await this.createData(functionName, functionArguments);
 
         const abiPayload = await this.createAbiPayload(universalProfileAddress, data, 0);
-        
+
         const universalProfile = await this.getUniversalProfile(universalProfileAddress);
-        
+
         const encodedMessage = await this.createEncodedMessage(abiPayload, universalProfile, value);
-        
+
         const signedMessage = await this.signEncodedMessage(universalProfile, encodedMessage);
 
+        const keyManager = await this.getKeyManager(universalProfile);
+        const channelId = 0;
+        const controllerAccount = new ethers.Wallet(this.privateKey).connect(
+            this.provider,
+        );
+        const nonce = await keyManager.getNonce(controllerAccount.address, channelId);
+
+        await this.makeAPICall(universalProfileAddress, abiPayload, nonce, signedMessage);
         return signedMessage;
     }
 
-    createData = async function(functionName, functionArguments) {
+    createData = async function (functionName, functionArguments) {
         const contract = new ethers.Contract(this.contractAddress, this.contractAbi, this.provider);
 
         const data = contract.interface.encodeFunctionData(functionName, functionArguments);
@@ -41,7 +53,7 @@ class RelayerSDK {
         return data;
     }
 
-    getUniversalProfile = function(universalProfileAddress) {
+    getUniversalProfile = function (universalProfileAddress) {
         const controllerAccount = new ethers.Wallet(this.privateKey).connect(
             this.provider,
         );
@@ -55,12 +67,12 @@ class RelayerSDK {
         return universalProfile;
     }
 
-    getKeyManagerAddress = async function(universalProfile) {
+    getKeyManagerAddress = async function (universalProfile) {
         const keyManagerAddress = await universalProfile.owner();
         return keyManagerAddress;
     }
 
-    getKeyManager = async function(universalProfile) {
+    getKeyManager = async function (universalProfile) {
         const controllerAccount = new ethers.Wallet(this.privateKey).connect(
             this.provider,
         );
@@ -75,7 +87,7 @@ class RelayerSDK {
         return keyManager;
     }
 
-    createAbiPayload = async function(universalProfileAddress, data, value) {
+    createAbiPayload = async function (universalProfileAddress, data, value) {
         const universalProfile = this.getUniversalProfile(universalProfileAddress);
 
         const abiPayload = universalProfile.interface.encodeFunctionData('execute', [
@@ -90,7 +102,7 @@ class RelayerSDK {
         return abiPayload;
     }
 
-    createEncodedMessage = async function(abiPayload, universalProfile, msgValue) {
+    createEncodedMessage = async function (abiPayload, universalProfile, msgValue) {
         const controllerAccount = new ethers.Wallet(this.privateKey).connect(
             this.provider,
         );
@@ -124,7 +136,7 @@ class RelayerSDK {
         return encodedMessage;
     }
 
-    signEncodedMessage = async function(universalProfile, encodedMessage) {
+    signEncodedMessage = async function (universalProfile, encodedMessage) {
         const keyManagerAddress = await this.getKeyManagerAddress(universalProfile);
         let eip191Signer = new EIP191Signer();
 
@@ -137,6 +149,27 @@ class RelayerSDK {
         );
 
         return signature;
+    }
+
+    makeAPICall = async function (universalProfileAddress, abi, nonce, signedMessage) {
+        const url = this.baseUrl + this.executeEndpoint;
+        const input = {
+            "user_id": this.userId,
+            "address": universalProfileAddress,
+            "transaction": {
+                "abi": abi,
+                "nonce": nonce,
+                "signature": signedMessage,
+                "validityTimestamps": this.validityTimestamps,
+            }
+        }
+
+        try {
+            const response = await axios.post(url, input);
+            return response;
+        } catch (error) {
+            return error;
+        }
     }
 }
 
