@@ -21,6 +21,7 @@ class RelayerSDK {
         this.validityTimestamps = "0x0000000000000000000000000000000000000000000000000000000067748580";
         this.baseUrl = "http://localhost:3000"
         this.executeEndpoint = "/execute"
+        this.LSP25_VERSION = 25
     }
 
     execute = async function (universalProfileAddress, value, functionName, functionArguments) {
@@ -117,7 +118,7 @@ class RelayerSDK {
             ['uint256', 'uint256', 'uint256', 'uint256', 'uint256', 'bytes'],
             [
                 // MUST be number `25`
-                LSP25_VERSION, // `0x0000000000000000000000000000000000000000000000000000000000000019`
+                this.LSP25_VERSION, // `0x0000000000000000000000000000000000000000000000000000000000000019`
                 // e.g: `4201` for LUKSO Testnet
                 this.chainId, // `0x0000000000000000000000000000000000000000000000000000000000001069`
                 // e.g: nonce number 5 of the signer key X 
@@ -158,7 +159,7 @@ class RelayerSDK {
             "address": universalProfileAddress,
             "transaction": {
                 "abi": abi,
-                "nonce": nonce,
+                "nonce": `${nonce}`,
                 "signature": signedMessage,
                 "validityTimestamps": this.validityTimestamps,
             }
@@ -173,4 +174,4 @@ class RelayerSDK {
     }
 }
 
-module.exports = RelayerSDK
+export default RelayerSDK
